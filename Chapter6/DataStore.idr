@@ -2,54 +2,70 @@ module Main
 
 import Data.Vect
 
-data DataStore : Type where
-  MkData : (size : Nat) -> (items : Vect size String) -> DataStore
+infix 5 .+.
 
-total size : DataStore -> Nat
-size (MkData size _) = size
+data Schema = SString 
+            | SInt
+            | (.+.) Schema Schema
 
-total items : (store : DataStore) -> Vect (size store) String
-items (MkData _ items) = items
+SchemaType : Schema -> Type
+SchemaType SString = String
+SchemaType SInt = Int
+SchemaType (x .+. y) = (SchemaType x, SchemaType y)
 
-total addToStore : DataStore -> String -> DataStore
-addToStore (MkData size items) item = MkData _ (items ++ [item])
+record DataStore where
+  constructor MkData
+  schema: Schema
+  size : Nat
+  items : Vect size (SchemaType schema)
 
-data Command = Add String | Get Integer | Size | Search String | Quit
+total addToStore : (store : DataStore) -> SchemaType (schema store) -> DataStore
+addToStore (MkData schema size store) newitem = MkData schema _ (addToData store)
+  where addToData : Vect oldsize (SchemaType schema) -> Vect (S oldsize) (SchemaType schema)
+        addToData [] = [newitem]
+        addToData (item :: items) = item :: addToData items
 
-total parseCommand : (cmd : String) -> (args : String) -> Maybe Command
-parseCommand "add" item = Just (Add item)
-parseCommand "get" index = if all isDigit (unpack index)
+data Command : Schema -> Type where 
+  Add : SchemaType schema -> Command schema 
+  Get : Integer -> Command schema 
+  Size : Command schema
+  Search : String -> Command schema 
+  Quit : Command schema
+
+total parseCommand : (schema : Schema) -> (cmd : String) -> (args : String) -> Maybe (Command schema)
+parseCommand schema "add" item = Just (Add (?parseBySchema item))
+parseCommand schema "get" index = if all isDigit (unpack index)
                            then Just (Get $ cast index)
                            else Nothing
-parseCommand "size" "" = Just Size
-parseCommand "quit" "" = Just Quit
-parseCommand "search" substr = Just (Search substr)
-parseCommand _ _ = Nothing
+parseCommand schema "size" "" = Just Size
+parseCommand schema "quit" "" = Just Quit
+parseCommand schema "search" substr = Just (Search substr)
+parseCommand _ _ _ = Nothing
 
-total parse : String -> Maybe Command
-parse input = case span (/= ' ') input of
-                (cmd, args) => parseCommand cmd (ltrim args)
+total parse : (schema : Schema) -> (input : String) -> Maybe (Command schema)
+parse schema input = case span (/= ' ') input of
+                       (cmd, args) => parseCommand schema cmd (ltrim args)
 
-total getEntry : Integer -> DataStore -> Maybe (String, DataStore)
-getEntry pos ds@(MkData size items) =
+total getEntry : (pos : Integer) -> (store : DataStore) -> Maybe (String, DataStore)
+getEntry pos store@(MkData schema size items) =
   case integerToFin pos size of
-    Nothing => Just ("Out of range\n", ds)
-    Just id => Just (index id items ++ "\n", ds)
+    Nothing => Just ("Out of range\n", store)
+    Just id => Just (?display (index id items) ++ "\n", store)
 
 searchEntry : (sub : String) -> (ds : DataStore) -> Maybe (String, DataStore)
-searchEntry sub ds =
-  let found = snd $ Data.Vect.filter (isInfixOf sub) $ items ds
-      found_str = (concat $ toList $ Data.Vect.intersperse "," $ map show found) ++ "\n"
-      in Just (found_str, ds)
+searchEntry sub ds = Nothing
+  -- let found = snd $ Data.Vect.filter (?isInfixOf sub) $ items ds
+  --     found_str = (concat $ toList $ Data.Vect.intersperse "," $ map show found) ++ "\n"
+  --     in Just (found_str, ds)
 
 total processInput : DataStore -> String -> Maybe (String, DataStore)
-processInput ds cmd = case parse cmd of
+processInput ds@(MkData schema _ items) cmd = case parse schema cmd of
                         Nothing => Just ("Invalid command\n", ds)
-                        Just (Add item) => Just ("ID " ++ show (size ds) ++ "\n", addToStore ds item)
+                        Just (Add item) => Just ("ID " ++ show (size ds) ++ "\n", addToStore ds (?convert item))
                         Just (Get index) => getEntry index ds
                         Just Size => Just ("SIZE " ++ show (size ds) ++ "\n", ds)
                         Just (Search substr) => searchEntry substr ds
                         Just Quit => Nothing
 
 main : IO ()
-main = replWith (MkData _ []) "Command: " processInput
+main = replWith (MkData SString _ []) "Command: " processInput
