@@ -29,11 +29,39 @@ data Command : Schema -> Type where
   Add : SchemaType schema -> Command schema 
   Get : Integer -> Command schema 
   Size : Command schema
-  Search : String -> Command schema 
+  Search : String -> Command schema
   Quit : Command schema
 
+total parsePrefix : (schema : Schema) -> String -> Maybe (SchemaType schema, String)
+parsePrefix SString input = 
+  getQuoted (unpack input)
+    where getQuoted : List Char -> Maybe (String, String)
+          getQuoted ('"' :: xs) = 
+            case span (/= '"') xs of
+              (quoted, '"' :: rest) => Just (pack quoted, ltrim (pack rest))
+              _ => Nothing
+          getQuoted _ = Nothing
+parsePrefix SInt input = 
+  case span isDigit input of
+    ("", rest) => Nothing
+    (num, rest) => Just (cast num, ltrim rest)
+parsePrefix (schemal .+. schemar) input = do
+  (l_val, input1) <- parsePrefix schemal input
+  (r_val, input2) <- parsePrefix schemar input1
+  pure $ ((l_val, r_val), input2)
+
+total parseBySchema : (schema : Schema) -> String -> Maybe (SchemaType schema)
+parseBySchema schema input = 
+  case parsePrefix schema input of
+    Just (res, "") => Just res
+    Just _ => Nothing
+    Nothing => Nothing
+    
 total parseCommand : (schema : Schema) -> (cmd : String) -> (args : String) -> Maybe (Command schema)
-parseCommand schema "add" item = Just (Add (?parseBySchema item))
+parseCommand schema "add" items = 
+  case parseBySchema schema items of
+    Nothing => Nothing
+    Just itemsok => Just (Add itemsok)
 parseCommand schema "get" index = if all isDigit (unpack index)
                            then Just (Get $ cast index)
                            else Nothing
@@ -46,11 +74,16 @@ total parse : (schema : Schema) -> (input : String) -> Maybe (Command schema)
 parse schema input = case span (/= ' ') input of
                        (cmd, args) => parseCommand schema cmd (ltrim args)
 
+display : SchemaType schema -> String
+display {schema = SString} item = show item
+display {schema = SInt} item = show item
+display {schema = (x .+. y)} (a, b) = display a ++ ", " ++ display b
+
 total getEntry : (pos : Integer) -> (store : DataStore) -> Maybe (String, DataStore)
 getEntry pos store@(MkData schema size items) =
   case integerToFin pos size of
     Nothing => Just ("Out of range\n", store)
-    Just id => Just (?display (index id items) ++ "\n", store)
+    Just id => Just ((?_sdisplay schema) (index id items) ++ "\n", store)
 
 searchEntry : (sub : String) -> (ds : DataStore) -> Maybe (String, DataStore)
 searchEntry sub ds = Nothing
