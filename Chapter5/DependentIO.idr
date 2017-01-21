@@ -12,4 +12,6 @@ zipInputs = do putStrLn "Enter first (blank line to end):"
                (len1 ** vec1) <- readVect
                putStrLn "Enter second (blank line to end):"
                (len2 ** vec2) <- readVect
-               if len1 == len2 then ?zipInputs_rhs1 else ?zipInputs_rhs2
+               case exactLength len1 vec2 of
+                  Nothing => putStrLn "Different lengths"
+                  Just vec2' => printLn $ zip vec1 vec2'

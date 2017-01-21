@@ -51,4 +51,8 @@ Show ty => Show (Expr ty) where
   show (Div x y) = br $ show x ++ " div " ++ show y
   show (Abs x) = "abs(" ++ show x ++ ")"
 
-Eq ty => Eq (Expr ty) where    
+(Eq ty, Neg ty, Integral ty) => Eq (Expr ty) where    
+  (==) x y = eval x == eval y
+
+(Neg ty, Integral ty, Cast ty to_ty) => Cast (Expr ty) to_ty where    
+  cast = cast . eval
