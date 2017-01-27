@@ -1,0 +1,11 @@
+Chapter 5
+Dependent pairs e.g. (len ** Vect len a)
+
+Chapter 7
+%name for auto defaulting names
+
+Chapter 8
+The need for Refl, DecEq, etc (as == does not guarantee equality)
+cong : {f: a -> b} ->   (a = b) -> f a = f b
+DecEq, Yes prf, No contra
+impossible

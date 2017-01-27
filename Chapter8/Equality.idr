@@ -3,6 +3,7 @@ data Vect : Nat -> Type -> Type where
   (::) : a -> Vect k a -> Vect (S k) a
 
 -- FAIL - m == len does not guarantee that m and len are equal
+-- So the vector `input` is not proven to be of type Vect len a
 -- exactLength : (len : Nat) -> (input : Vect m a) -> Maybe (Vect len a)
 -- exactLength {m} len input = 
 --   case m == len of
