@@ -9,3 +9,8 @@ The need for Refl, DecEq, etc (as == does not guarantee equality)
 cong : {f: a -> b} ->   (a = b) -> f a = f b
 DecEq, Yes prf, No contra
 impossible
+
+Chapter 9
+ELem to show an element is in a list (Here & There)
+absurd for an impossible to construct case
+Use auto to make calling removeElem sane
