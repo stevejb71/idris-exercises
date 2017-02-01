@@ -1,21 +1,53 @@
+import Data.List
+
+notInNil : Elem value [] -> Void
+notInNil Here impossible
+notInNil (There _) impossible
+
+notInTail : (notThere : Elem value xs -> Void) -> (notHere : (value = x) -> Void) -> Elem value (x :: xs) -> Void
+notInTail notThere notHere Here = notHere Refl
+notInTail notThere notHere (There later) = notThere later
+
+total myIsElem : DecEq a => (value : a) -> (xs : List a) -> Dec (Elem value xs)
+myIsElem value [] = No notInNil
+myIsElem value (x :: xs) = 
+  case decEq value x of
+    Yes Refl => Yes Here
+    No notHere => 
+      case myIsElem value xs of
+        Yes prf => Yes (There prf)
+        No notThere => No (notInTail notThere notHere)
+
+--- Last
+
 data Last : List a -> a -> Type where
-  LastOne  : Last [value] value
+  LastOne : Last [value] value
   LastCons : (prf : Last xs value) -> Last (x :: xs) value
 
-last123 : Last [1, 2, 3] 3
+last123 : Last [1,2,3] 3
 last123 = LastCons (LastCons LastOne)
 
-lastOnEmpty : Last [] value -> Void
-lastOnEmpty LastOne impossible
-lastOnEmpty (LastCons _) impossible
+nilHasNoLast : Last [] value -> Void
+nilHasNoLast LastOne impossible
+nilHasNoLast (LastCons _) impossible
 
-rhs : (contra2 : Last xs value -> Void) -> (contra1 : (xs = [value]) -> Void) -> Dec (Last (x :: xs) value)
-rhs contra2 contra1 = ?rhs_rhs_2
+total no : {xs : List a} -> (notFound : Last xs value -> Void) -> Last (x :: xs) value -> Void
+no {xs = []} notFound LastOne impossible
+no {xs = xs} notFound (LastCons prf) = notFound prf
 
-isLast : DecEq a => (xs : List a) -> (value : a) -> Dec (Last xs value)
-isLast [] value = No lastOnEmpty
-isLast (x :: xs) value = case decEq xs [value] of
-                              Yes Refl => Yes (LastCons LastOne)
-                              No contra1 => case isLast xs value of
-                                                Yes prf => Yes (LastCons prf)
-                                                No contra2 => rhs contra2 contra1
+total lastNotEq : (con : (x = value) -> Void) -> Last [x] value -> Void
+lastNotEq con LastOne = con Refl
+lastNotEq _ (LastCons LastOne) impossible
+lastNotEq _ (LastCons (LastCons _)) impossible
+
+total isLast : DecEq a => (xs : List a) -> (value : a) -> Dec (Last xs value)
+isLast [] _ = No nilHasNoLast
+isLast [x] value =
+  case decEq x value of
+    Yes Refl => Yes LastOne
+    No con => No (lastNotEq con)
+isLast (x :: xs) value = 
+  case isLast xs value of
+    No notFound => No (no notFound)
+    Yes LastOne => Yes (LastCons LastOne)
+    Yes (LastCons prf) => Yes (LastCons (LastCons prf)) 
