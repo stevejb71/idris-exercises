@@ -23,3 +23,11 @@ total myReverse2 : List a -> List a
 myReverse2 input with (snocList input)
   myReverse2 [] | Empty = []
   myReverse2 (xs ++ [x]) | (Snoc rec) = x :: myReverse2 xs | rec
+
+total isSuffix : Eq a => List a -> List a -> Bool
+isSuffix input1 input2 with (snocList input1)
+  isSuffix [] input2 | Empty = True
+  isSuffix (xs ++ [x]) input2 | (Snoc xsrec) with (snocList input2)
+    isSuffix (xs ++ [x]) [] | (Snoc ysrec) | Empty = False
+    isSuffix (xs ++ [x]) (ys ++ [y]) | (Snoc xsrec) | (Snoc ysrec) = 
+      x == y && (isSuffix xs ys | xsrec | ysrec) 
