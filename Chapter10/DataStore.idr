@@ -61,7 +61,10 @@ filterKeys test input with (storeView input)
 
 -- Ex 10.3.4
 
+total
 getValues : DataStore (SString .+. val_schema) -> List (SchemaType val_schema)
 getValues input with (storeView input)
   getValues input | SNil = []
-  getValues (addToStore value store) | (SAdd rec) = ?input_rhs_2
+  getValues (addToStore (_, value) store) | (SAdd rec) = 
+    (value :: getValues store) | rec
+
