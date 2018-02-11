@@ -31,9 +31,8 @@ nilHasNoLast : Last [] value -> Void
 nilHasNoLast LastOne impossible
 nilHasNoLast (LastCons _) impossible
 
-total no : {xs : List a} -> (notFound : Last xs value -> Void) -> Last (x :: xs) value -> Void
-no {xs = []} notFound LastOne impossible
-no {xs = xs} notFound (LastCons prf) = notFound prf
+total no : (notFound : Last (x :: xs) value -> Void) -> Last (_ :: x :: xs) value -> Void
+no notFound (LastCons prf) = notFound prf
 
 total lastNotEq : (con : (x = value) -> Void) -> Last [x] value -> Void
 lastNotEq con LastOne = con Refl
@@ -46,8 +45,8 @@ isLast [x] value =
   case decEq x value of
     Yes Refl => Yes LastOne
     No con => No (lastNotEq con)
-isLast (x :: xs) value = 
-  case isLast xs value of
+isLast (_ :: x :: xs) value =
+  case isLast (x :: xs) value of
     No notFound => No (no notFound)
     Yes LastOne => Yes (LastCons LastOne)
     Yes (LastCons prf) => Yes (LastCons (LastCons prf)) 
